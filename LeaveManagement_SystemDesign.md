@@ -21,6 +21,8 @@
 | Auth     | JWT (Bearer Token)    | role-based              |
 | Docs     | Swagger / OpenAPI     | โชว์ API ได้สวยตอน demo |
 
+> **Auth note:** ใช้ access token อย่างเดียว (อายุ ~60 นาที) ไม่ทำ refresh token — out of scope โดยตั้งใจ
+
 ---
 
 ## 3. Roles & User Stories
@@ -34,10 +36,16 @@
 
 ### Manager
 
-- ดูคำขอลาของลูกทีม (เฉพาะ department ตัวเอง)
-- อนุมัติ / ปฏิเสธ พร้อมใส่ comment
+- ดูคำขอลาของลูกทีม (เฉพาะแผนกที่ตนเป็น Department.ManagerId)
+- อนุมัติ / ปฏิเสธ พร้อมใส่ comment (เฉพาะใบของแผนกที่ตนเป็น ManagerId)
 - เมื่ออนุมัติ → ระบบตัดวันลาอัตโนมัติ
 - Dashboard สรุปจำนวนคำขอ Pending
+
+### Admin
+
+- จัดการประเภทการลา (LeaveTypes): เพิ่ม/แก้ชื่อ, DefaultDaysPerYear, ColorCode
+- จัดการผู้ใช้: สร้าง / ปิดการใช้งาน, กำหนด Role + Department, ตั้งหัวหน้าแผนก (Departments.ManagerId)
+- สั่งสร้างโควต้าวันลาของปีใหม่ให้ทุกคน (year rollover)
 
 > ขอบเขตตั้งใจให้เล็ก: ไม่ทำ payroll, ไม่ทำ shift, ไม่ทำ multi-level approval — โฟกัสให้ flow เดียวสมบูรณ์
 
@@ -71,13 +79,17 @@ LeaveManagement.Api/
 ├── Controllers/
 │   ├── AuthController.cs
 │   ├── LeaveRequestsController.cs
-│   └── LeaveBalancesController.cs
+│   ├── LeaveBalancesController.cs
+│   ├── LeaveTypesController.cs      # Admin: จัดการประเภทการลา
+│   └── UsersController.cs           # Admin: จัดการผู้ใช้
 ├── Services/
 │   ├── Interfaces/
 │   │   ├── ILeaveRequestService.cs
 │   │   └── IAuthService.cs
 │   ├── LeaveRequestService.cs
-│   └── AuthService.cs
+│   ├── AuthService.cs
+│   ├── LeaveTypeService.cs          # Admin
+│   └── UserService.cs               # Admin
 ├── Repositories/
 │   ├── Interfaces/
 │   └── LeaveRequestRepository.cs
@@ -188,6 +200,8 @@ erDiagram
 | HireDate | DATE | |
 | IsActive | BIT | default 1 |
 
+> **สิทธิ์อนุมัติ vs Role:** `Departments.ManagerId` กำหนดว่า "ใครอนุมัติใบลาของแผนกนี้ได้" (รายแผนก) ส่วน `Users.Role` ใช้คุม access ระดับ endpoint/เมนูเท่านั้น — แยกบทบาทกันชัดเจน ไม่กำกวม
+
 **LeaveTypes** — ประเภทการลา (master data)
 | Column | Type | Note |
 |---|---|---|
@@ -292,6 +306,10 @@ CREATE TABLE LeaveRequests (
         REFERENCES Users(UserId),
     CONSTRAINT CK_Request_Dates CHECK (EndDate >= StartDate)
 );
+
+-- Indexes สำหรับ query ร้อน
+CREATE INDEX IX_LeaveRequests_UserId ON LeaveRequests(UserId);   -- "คำขอของฉัน"
+CREATE INDEX IX_LeaveRequests_Status ON LeaveRequests(Status);   -- "pending ของทีม"
 ```
 
 ### 6.4 Seed Data (เริ่มต้น)
@@ -303,6 +321,8 @@ INSERT INTO LeaveTypes (Name, DefaultDaysPerYear, ColorCode) VALUES
 (N'ลาพักร้อน',  10, '#4CAF50');
 ```
 
+> หมายเหตุ: เมื่อ seed user ตัวอย่าง ต้อง seed `LeaveBalances` ของ user เหล่านั้นด้วย (1 row ต่อ LeaveType ของปีปัจจุบัน) ไม่ใช่ seed แค่ LeaveTypes — ดู §7 LeaveBalances lifecycle
+
 ---
 
 ## 7. Core Business Logic
@@ -313,17 +333,28 @@ INSERT INTO LeaveTypes (Name, DefaultDaysPerYear, ColorCode) VALUES
 2. เช็คว่า `RemainingDays >= TotalDays` ไม่งั้น reject ทันที
 3. สร้าง record `Status = Pending` — **ยังไม่ตัดโควต้า**
 
-### ตอนอนุมัติ
+### ตอนอนุมัติ (ทุกขั้นอยู่ใน DB transaction เดียว)
 
-1. เช็คว่าคนกดเป็น Manager และอยู่ department เดียวกับผู้ยื่น
-2. เปลี่ยน `Status = Approved`, บันทึก ApproverId
-3. **ตัดโควต้า:** `UsedDays += TotalDays` (ทำใน transaction เดียวกันกันข้อมูลพัง)
+1. **เช็คสิทธิ์:** `approver.UserId` ต้องเท่ากับ `Departments.ManagerId` ของแผนกผู้ยื่น (ไม่ใช่แค่ Role=Manager)
+2. **re-validate `RemainingDays >= TotalDays` อีกครั้ง** — ถ้าไม่พอ ปฏิเสธการอนุมัติ
+3. เปลี่ยน `Status = Approved`, บันทึก ApproverId
+4. **ตัดโควต้า:** `UsedDays += TotalDays`
 
 ### ตอนปฏิเสธ/ยกเลิก
 
 - เปลี่ยน status เฉยๆ ไม่แตะโควต้า
+- ยกเลิก (cancel) ทำได้เฉพาะใบที่ยัง `Pending` เท่านั้น — ยังไม่เคยตัดโควต้า จึงไม่ต้องคืน
+- **out of scope โดยตั้งใจ:** การยกเลิกใบที่ `Approved` แล้ว + คืนโควต้า (`UsedDays -= TotalDays`)
 
-> จุดที่ต้องระวัง (พูดตอนสัมภาษณ์ได้): ใช้ DB transaction ตอน approve เพื่อไม่ให้ status เปลี่ยนแต่โควต้าไม่ตัด (atomicity)
+### การสร้าง/รีเซ็ตโควต้า (LeaveBalances lifecycle)
+
+- **ตอนสร้าง user ใหม่:** service สร้าง `LeaveBalances` 1 row ต่อ `LeaveType` ที่มีอยู่ สำหรับปีปัจจุบัน (`TotalDays = LeaveType.DefaultDaysPerYear`, `UsedDays = 0`)
+- **ขึ้นปีใหม่ (year rollover):** Admin เรียก `POST /api/leave-balances/generate?year=` สร้างโควต้าปีถัดไปให้ทุกคน — นโยบาย **reset ใหม่ทุกปี ไม่ carry-over** (scope decision)
+- UNIQUE `(UserId, LeaveTypeId, Year)` กันการสร้างโควต้าซ้ำ
+
+> จุดที่ต้องระวัง (พูดตอนสัมภาษณ์ได้):
+> - ใช้ DB transaction ครอบ "เช็คโควต้า → เปลี่ยน status → ตัดโควต้า" ให้เป็น atomic (status เปลี่ยนแต่โควต้าไม่ตัด = ข้อมูลพัง)
+> - re-check โควต้าตอน approve เพราะตอนยื่นเช็คแค่ ณ ขณะนั้น ถ้ายื่นหลายใบ Pending พร้อมกัน รวมกันอาจเกินโควต้า — เช็คซ้ำตอนตัดจริงกันโควต้าติดลบ
 
 ---
 
@@ -340,6 +371,13 @@ INSERT INTO LeaveTypes (Name, DefaultDaysPerYear, ColorCode) VALUES
 | PUT    | `/api/leave-requests/{id}/approve` | Manager  | อนุมัติ                |
 | PUT    | `/api/leave-requests/{id}/reject`  | Manager  | ปฏิเสธ + comment       |
 | GET    | `/api/dashboard/summary`           | Manager  | สรุปจำนวน Pending      |
+| POST   | `/api/leave-types`                 | Admin    | เพิ่มประเภทการลา       |
+| PUT    | `/api/leave-types/{id}`            | Admin    | แก้ประเภท/โควต้า default |
+| POST   | `/api/users`                       | Admin    | สร้าง user (auto สร้าง balances) |
+| PUT    | `/api/users/{id}`                  | Admin    | แก้ role/department/active |
+| POST   | `/api/leave-balances/generate`     | Admin    | สร้างโควต้าปีใหม่ (`?year=`) |
+
+> Manager endpoints (`pending` / `approve` / `reject`) บังคับเงื่อนไขเพิ่ม: ทำได้เฉพาะใบลาของแผนกที่ผู้เรียกเป็น `Departments.ManagerId` (Role=Manager แค่ผ่านด่าน RBAC เข้า endpoint)
 
 ---
 
