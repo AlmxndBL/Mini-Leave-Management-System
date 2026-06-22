@@ -1,0 +1,121 @@
+<div class="dashboard">
+  <div class="navbar">
+    <div class="nav-left">
+      <h1>Employee Dashboard</h1>
+      <p class="welcome">ยินดีต้อนรับ, {{ user?.firstName }} {{ user?.lastName }}</p>
+    </div>
+    <button class="btn-logout" (click)="logout()">ออกจากระบบ</button>
+  </div>
+
+  <div class="container">
+    <section class="section">
+      <h2>วันลาคงเหลือ</h2>
+      <div class="balances-grid">
+        <div *ngFor="let balance of leaveBalances" class="balance-card" [style.border-left-color]="balance.colorCode || '#999'">
+          <h3>{{ balance.leaveTypeName }}</h3>
+          <div class="balance-info">
+            <div class="balance-item">
+              <span class="label">โควต้าทั้งหมด:</span>
+              <span class="value">{{ balance.totalDays }} วัน</span>
+            </div>
+            <div class="balance-item">
+              <span class="label">ใช้ไปแล้ว:</span>
+              <span class="value">{{ balance.usedDays }} วัน</span>
+            </div>
+            <div class="balance-item highlight">
+              <span class="label">คงเหลือ:</span>
+              <span class="value">{{ balance.remainingDays }} วัน</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <h2>ประวัติการยื่นใบลา</h2>
+        <button class="btn-primary" (click)="openModal()">+ ยื่นใบลา</button>
+      </div>
+
+      <div *ngIf="leaveRequests.length > 0; else noRequests" class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>ประเภท</th>
+              <th>วันที่เริ่ม</th>
+              <th>วันที่สิ้นสุด</th>
+              <th>จำนวนวัน</th>
+              <th>สถานะ</th>
+              <th>สร้างเมื่อ</th>
+              <th>การกระทำ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let request of leaveRequests">
+              <td>{{ request.leaveTypeName }}</td>
+              <td>{{ request.startDate | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ request.endDate | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ request.totalDays }}</td>
+              <td>
+                <span class="status" [ngClass]="'status-' + request.status">
+                  {{ LeaveRequestStatusText[request.status] }}
+                </span>
+              </td>
+              <td>{{ request.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td>
+                <button
+                  *ngIf="request.status === 0"
+                  class="btn-cancel"
+                  (click)="cancelRequest(request.leaveRequestId)"
+                >
+                  ยกเลิก
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #noRequests>
+        <p class="no-data">ไม่มีข้อมูลการยื่นใบลา</p>
+      </ng-template>
+    </section>
+  </div>
+
+  <!-- Modal -->
+  <div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>ยื่นใบลา</h2>
+
+      <div class="form-group">
+        <label>ประเภทการลา:</label>
+        <select [(ngModel)]="newRequest.leaveTypeId" name="leaveTypeId">
+          <option value="0">-- เลือกประเภทการลา --</option>
+          <option *ngFor="let type of leaveTypes" [value]="type.leaveTypeId">
+            {{ type.name }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>วันที่เริ่ม:</label>
+        <input type="date" [(ngModel)]="newRequest.startDate" name="startDate" />
+      </div>
+
+      <div class="form-group">
+        <label>วันที่สิ้นสุด:</label>
+        <input type="date" [(ngModel)]="newRequest.endDate" name="endDate" />
+      </div>
+
+      <div class="form-group">
+        <label>เหตุผล:</label>
+        <textarea [(ngModel)]="newRequest.reason" name="reason" placeholder="เหตุผลการลา (ถ้ามี)"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="closeModal()">ยกเลิก</button>
+        <button class="btn-primary" (click)="submitRequest()">ยื่นใบลา</button>
+      </div>
+    </div>
+  </div>
+</div>
