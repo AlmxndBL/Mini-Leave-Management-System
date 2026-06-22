@@ -1,0 +1,77 @@
+<div class="dashboard">
+  <div class="navbar">
+    <div class="nav-left">
+      <h1>Admin Dashboard</h1>
+      <p class="welcome">ยินดีต้อนรับ, {{ user?.firstName }} {{ user?.lastName }}</p>
+    </div>
+    <button class="btn-logout" (click)="logout()">ออกจากระบบ</button>
+  </div>
+
+  <div class="container">
+    <section class="section">
+      <div class="section-header">
+        <h2>จัดการประเภทการลา</h2>
+        <div class="header-actions">
+          <button class="btn-primary" (click)="openModal()">+ เพิ่มประเภทการลา</button>
+          <button class="btn-secondary" (click)="generateLeaveBalances()">สร้างโควต้าปีใหม่</button>
+        </div>
+      </div>
+
+      <div *ngIf="leaveTypes.length > 0; else noTypes" class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>ชื่อประเภท</th>
+              <th>โควต้า (วัน)</th>
+              <th>สี</th>
+              <th>สร้างเมื่อ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let type of leaveTypes">
+              <td>{{ type.name }}</td>
+              <td>{{ type.defaultDaysPerYear }}</td>
+              <td>
+                <div class="color-indicator" [style.background-color]="type.colorCode">
+                  {{ type.colorCode }}
+                </div>
+              </td>
+              <td>-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #noTypes>
+        <p class="no-data">ไม่มีประเภทการลา</p>
+      </ng-template>
+    </section>
+  </div>
+
+  <!-- Modal -->
+  <div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>เพิ่มประเภทการลา</h2>
+
+      <div class="form-group">
+        <label>ชื่อประเภท:</label>
+        <input type="text" [(ngModel)]="newType.name" name="name" placeholder="เช่น ลาป่วย" />
+      </div>
+
+      <div class="form-group">
+        <label>โควต้า (วัน/ปี):</label>
+        <input type="number" [(ngModel)]="newType.defaultDaysPerYear" name="days" />
+      </div>
+
+      <div class="form-group">
+        <label>สี:</label>
+        <input type="color" [(ngModel)]="newType.colorCode" name="color" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="closeModal()">ยกเลิก</button>
+        <button class="btn-primary" (click)="saveLeaveType()">บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>

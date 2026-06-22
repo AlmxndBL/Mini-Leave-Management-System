@@ -1,0 +1,112 @@
+<div class="dashboard">
+  <div class="navbar">
+    <div class="nav-left">
+      <h1>Manager Dashboard</h1>
+      <p class="welcome">ยินดีต้อนรับ, {{ user?.firstName }} {{ user?.lastName }}</p>
+    </div>
+    <button class="btn-logout" (click)="logout()">ออกจากระบบ</button>
+  </div>
+
+  <div class="container">
+    <section class="summary-section">
+      <h2>สรุปข้อมูล</h2>
+      <div class="summary-grid" *ngIf="summary">
+        <div class="summary-card pending">
+          <div class="number">{{ summary.pendingCount }}</div>
+          <div class="label">รอการอนุมัติ</div>
+        </div>
+        <div class="summary-card approved">
+          <div class="number">{{ summary.approvedCount }}</div>
+          <div class="label">อนุมัติแล้ว</div>
+        </div>
+        <div class="summary-card rejected">
+          <div class="number">{{ summary.rejectedCount }}</div>
+          <div class="label">ปฏิเสธ</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>คำขอลาที่รอการอนุมัติ</h2>
+
+      <div *ngIf="pendingRequests.length > 0; else noPending" class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>ชื่อพนักงาน</th>
+              <th>ประเภทการลา</th>
+              <th>วันที่เริ่ม</th>
+              <th>วันที่สิ้นสุด</th>
+              <th>จำนวนวัน</th>
+              <th>เหตุผล</th>
+              <th>การกระทำ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let request of pendingRequests">
+              <td>{{ request.employeeName }}</td>
+              <td>{{ request.leaveTypeName }}</td>
+              <td>{{ request.startDate | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ request.endDate | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ request.totalDays }}</td>
+              <td>{{ request.reason || '-' }}</td>
+              <td class="actions">
+                <button
+                  class="btn-approve"
+                  (click)="openApprovalModal(request, false)"
+                >
+                  อนุมัติ
+                </button>
+                <button
+                  class="btn-reject"
+                  (click)="openApprovalModal(request, true)"
+                >
+                  ปฏิเสธ
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #noPending>
+        <p class="no-data">ไม่มีคำขอลาที่รอการอนุมัติ</p>
+      </ng-template>
+    </section>
+  </div>
+
+  <!-- Approval Modal -->
+  <div *ngIf="showApprovalModal" class="modal-overlay" (click)="closeApprovalModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>{{ isRejecting ? 'ปฏิเสธคำขอลา' : 'อนุมัติคำขอลา' }}</h2>
+
+      <div *ngIf="selectedRequest" class="request-info">
+        <p><strong>พนักงาน:</strong> {{ selectedRequest.employeeName }}</p>
+        <p><strong>ประเภทการลา:</strong> {{ selectedRequest.leaveTypeName }}</p>
+        <p><strong>วันที่:</strong> {{ selectedRequest.startDate | date: 'dd/MM/yyyy' }} - {{ selectedRequest.endDate | date: 'dd/MM/yyyy' }}</p>
+        <p><strong>จำนวนวัน:</strong> {{ selectedRequest.totalDays }}</p>
+        <p><strong>เหตุผล:</strong> {{ selectedRequest.reason || '-' }}</p>
+      </div>
+
+      <div class="form-group">
+        <label>{{ isRejecting ? 'เหตุผลการปฏิเสธ:' : 'ความเห็นเพิ่มเติม:' }}</label>
+        <textarea
+          [ngModel]="isRejecting ? rejectionComment : approvalComment"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="isRejecting ? (rejectionComment = $event) : (approvalComment = $event)"
+          [placeholder]="isRejecting ? 'บอกเหตุผลการปฏิเสธ' : 'ความเห็นเพิ่มเติม (ถ้ามี)'"
+        ></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="closeApprovalModal()">ยกเลิก</button>
+        <button
+          [class]="isRejecting ? 'btn-reject' : 'btn-approve'"
+          (click)="isRejecting ? reject() : approve()"
+        >
+          {{ isRejecting ? 'ปฏิเสธ' : 'อนุมัติ' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

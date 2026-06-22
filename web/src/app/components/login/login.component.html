@@ -1,0 +1,47 @@
+<div class="login-container">
+  <div class="login-box">
+    <h1>Leave Management System</h1>
+    <p class="subtitle">ระบบจัดการการลา</p>
+
+    <form (ngSubmit)="login()">
+      <div class="form-group">
+        <label for="email">Email:</label>
+        <input
+          type="email"
+          id="email"
+          [(ngModel)]="email"
+          name="email"
+          required
+          placeholder="อีเมล"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password:</label>
+        <input
+          type="password"
+          id="password"
+          [(ngModel)]="password"
+          name="password"
+          required
+          placeholder="รหัสผ่าน"
+        />
+      </div>
+
+      <div *ngIf="error" class="error-message">
+        {{ error }}
+      </div>
+
+      <button type="submit" [disabled]="loading">
+        {{ loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ' }}
+      </button>
+    </form>
+
+    <div class="demo-accounts">
+      <h3>บัญชีทดลอง:</h3>
+      <p><strong>Employee:</strong> employee@example.com / Employee@123</p>
+      <p><strong>Manager:</strong> manager@example.com / Manager@123</p>
+      <p><strong>Admin:</strong> admin@example.com / Admin@123</p>
+    </div>
+  </div>
+</div>
