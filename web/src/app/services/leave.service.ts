@@ -7,7 +7,7 @@ import { LeaveRequest, LeaveBalance, LeaveType, DashboardSummary, CreateLeaveReq
   providedIn: 'root'
 })
 export class LeaveService {
-  private apiUrl = 'http://localhost:5000/api';
+  private apiUrl = 'http://localhost:5125/api';
 
   constructor(private http: HttpClient) { }
 

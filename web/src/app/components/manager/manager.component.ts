@@ -23,7 +23,7 @@ export class ManagerComponent implements OnInit {
   rejectionComment = '';
   isRejecting = false;
 
-  user = this.authService.getCurrentUser();
+  user: any;
   LeaveRequestStatusText = LeaveRequestStatusText;
 
   constructor(
@@ -33,7 +33,12 @@ export class ManagerComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    this.user = this.authService.getCurrentUser();
     this.loadData();
+  }
+
+  getStatusText(status: number): string {
+    return LeaveRequestStatusText[status as keyof typeof LeaveRequestStatusText] || 'ไม่ทราบสถานะ';
   }
 
   loadData(): void {
