@@ -1,13 +1,19 @@
 using System.Text;
 using LeaveManagement.Api.Data;
+using LeaveManagement.Api.Infrastructure;
 using LeaveManagement.Api.Services;
 using LeaveManagement.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    // Serve all controller routes as kebab-case (e.g. LeaveRequests -> leave-requests)
+    options.Conventions.Add(new RouteTokenTransformerConvention(new SlugifyParameterTransformer()));
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

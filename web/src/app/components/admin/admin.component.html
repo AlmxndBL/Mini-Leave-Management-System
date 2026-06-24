@@ -32,9 +32,10 @@
               <td>{{ type.name }}</td>
               <td>{{ type.defaultDaysPerYear }}</td>
               <td>
-                <div class="color-indicator" [style.background-color]="type.colorCode">
+                <span class="color-indicator">
+                  <span class="swatch" [style.background]="type.colorCode"></span>
                   {{ type.colorCode }}
-                </div>
+                </span>
               </td>
               <td>-</td>
             </tr>

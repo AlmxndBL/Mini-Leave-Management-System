@@ -72,6 +72,14 @@ export class EmployeeComponent implements OnInit {
 
   openModal(): void {
     this.showModal = true;
+    // Self-heal: if leave types failed to load on init (e.g. backend not ready),
+    // fetch them again when the form is actually opened.
+    if (this.leaveTypes.length === 0) {
+      this.leaveService.getLeaveTypes().subscribe({
+        next: (types) => this.leaveTypes = types,
+        error: (err) => console.error('Error loading types', err)
+      });
+    }
   }
 
   closeModal(): void {
