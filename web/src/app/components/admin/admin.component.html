@@ -4,7 +4,10 @@
       <h1>Admin Dashboard</h1>
       <p class="welcome">ยินดีต้อนรับ, {{ user?.firstName }} {{ user?.lastName }}</p>
     </div>
-    <button class="btn-logout" (click)="logout()">ออกจากระบบ</button>
+    <div class="nav-actions">
+      <button class="btn-reports" (click)="goToReports()">รายงาน</button>
+      <button class="btn-logout" (click)="logout()">ออกจากระบบ</button>
+    </div>
   </div>
 
   <div class="container">
@@ -32,9 +35,10 @@
               <td>{{ type.name }}</td>
               <td>{{ type.defaultDaysPerYear }}</td>
               <td>
-                <div class="color-indicator" [style.background-color]="type.colorCode">
+                <span class="color-indicator">
+                  <span class="swatch" [style.background]="type.colorCode"></span>
                   {{ type.colorCode }}
-                </div>
+                </span>
               </td>
               <td>-</td>
             </tr>

@@ -27,7 +27,7 @@ export class EmployeeComponent implements OnInit {
     reason: ''
   };
 
-  user = this.authService.getCurrentUser();
+  user: any;
   LeaveRequestStatusText = LeaveRequestStatusText;
 
   constructor(
@@ -37,7 +37,12 @@ export class EmployeeComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    this.user = this.authService.getCurrentUser();
     this.loadData();
+  }
+
+  getStatusText(status: number): string {
+    return LeaveRequestStatusText[status as keyof typeof LeaveRequestStatusText] || 'ไม่ทราบสถานะ';
   }
 
   loadData(): void {
@@ -67,6 +72,14 @@ export class EmployeeComponent implements OnInit {
 
   openModal(): void {
     this.showModal = true;
+    // Self-heal: if leave types failed to load on init (e.g. backend not ready),
+    // fetch them again when the form is actually opened.
+    if (this.leaveTypes.length === 0) {
+      this.leaveService.getLeaveTypes().subscribe({
+        next: (types) => this.leaveTypes = types,
+        error: (err) => console.error('Error loading types', err)
+      });
+    }
   }
 
   closeModal(): void {

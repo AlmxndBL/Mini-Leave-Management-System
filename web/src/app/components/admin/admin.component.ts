@@ -24,7 +24,7 @@ export class AdminComponent implements OnInit {
     colorCode: '#999999'
   };
 
-  user = this.authService.getCurrentUser();
+  user: any;
 
   constructor(
     private authService: AuthService,
@@ -33,6 +33,7 @@ export class AdminComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    this.user = this.authService.getCurrentUser();
     this.loadLeaveTypes();
   }
 
@@ -82,6 +83,10 @@ export class AdminComponent implements OnInit {
         error: (err) => alert('ข้อผิดพลาด')
       });
     }
+  }
+
+  goToReports(): void {
+    this.router.navigate(['/reports']);
   }
 
   logout(): void {

@@ -58,7 +58,7 @@
               <td>{{ request.totalDays }}</td>
               <td>
                 <span class="status" [ngClass]="'status-' + request.status">
-                  {{ LeaveRequestStatusText[request.status] }}
+                  {{ getStatusText(request.status) }}
                 </span>
               </td>
               <td>{{ request.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>

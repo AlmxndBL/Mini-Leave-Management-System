@@ -1,13 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { LeaveRequest, LeaveBalance, LeaveType, DashboardSummary, CreateLeaveRequest, ApproveLeaveRequest, RejectLeaveRequest } from '../models/leave.model';
+import { LeaveRequest, LeaveBalance, LeaveType, DashboardSummary, CreateLeaveRequest, ApproveLeaveRequest, RejectLeaveRequest, LeaveSummaryRow, ReportQuery } from '../models/leave.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LeaveService {
-  private apiUrl = 'http://localhost:5000/api';
+  private apiUrl = 'http://localhost:5125/api';
 
   constructor(private http: HttpClient) { }
 
@@ -65,5 +65,37 @@ export class LeaveService {
   // Dashboard
   getDashboardSummary(): Observable<DashboardSummary> {
     return this.http.get<DashboardSummary>(`${this.apiUrl}/dashboard/summary`);
+  }
+
+  // Reports
+  getLeaveSummary(query: ReportQuery): Observable<LeaveSummaryRow[]> {
+    const params: Record<string, string> = {};
+    if (query.year) params['year'] = query.year.toString();
+    if (query.startDate) params['startDate'] = query.startDate;
+    if (query.endDate) params['endDate'] = query.endDate;
+    if (query.departmentId) params['departmentId'] = query.departmentId.toString();
+    if (query.leaveTypeId) params['leaveTypeId'] = query.leaveTypeId.toString();
+    return this.http.get<LeaveSummaryRow[]>(`${this.apiUrl}/reports/leave-summary`, { params });
+  }
+
+  exportLeaveSummary(query: ReportQuery): void {
+    const params = new URLSearchParams();
+    if (query.year) params.append('year', query.year.toString());
+    if (query.startDate) params.append('startDate', query.startDate);
+    if (query.endDate) params.append('endDate', query.endDate);
+    if (query.departmentId) params.append('departmentId', query.departmentId.toString());
+    if (query.leaveTypeId) params.append('leaveTypeId', query.leaveTypeId.toString());
+    const token = localStorage.getItem('token');
+    const qs = params.toString();
+    const url = `${this.apiUrl}/reports/leave-summary/export${qs ? '?' + qs : ''}`;
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.blob())
+      .then(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `leave-summary-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
   }
 }
