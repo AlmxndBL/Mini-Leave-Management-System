@@ -2,7 +2,7 @@
 
 ระบบจัดการการลาของพนักงาน (Employee Leave Management System)
 
-Portfolio project สำหรับสัมภาษณ์งาน Gofive — แสดงถึงความเข้าใจ full-stack development (Angular + .NET) พร้อม role-based access control, approval workflow, และ business logic
+
 
 ## 📋 Features
 
