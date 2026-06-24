@@ -29,6 +29,8 @@
   color: var(--text-muted);
 }
 
+.nav-actions { display: flex; gap: 8px; align-items: center; }
+
 .btn-logout {
   background: var(--surface);
   color: var(--text-muted);

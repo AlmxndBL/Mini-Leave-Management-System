@@ -5,11 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { LeaveService } from '../../services/leave.service';
 import { LeaveRequest, LeaveBalance, LeaveType, LeaveRequestStatus, LeaveRequestStatusText, CreateLeaveRequest } from '../../models/leave.model';
+import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
 
 @Component({
   selector: 'app-employee',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NotificationBellComponent],
   templateUrl: './employee.component.html',
   styleUrls: ['./employee.component.css']
 })

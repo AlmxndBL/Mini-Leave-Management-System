@@ -10,10 +10,12 @@ namespace LeaveManagement.Api.Services;
 public class LeaveRequestService : ILeaveRequestService
 {
     private readonly AppDbContext _context;
+    private readonly INotificationService _notificationService;
 
-    public LeaveRequestService(AppDbContext context)
+    public LeaveRequestService(AppDbContext context, INotificationService notificationService)
     {
         _context = context;
+        _notificationService = notificationService;
     }
 
     private decimal CalculateTotalDays(DateTime startDate, DateTime endDate)
@@ -22,16 +24,14 @@ public class LeaveRequestService : ILeaveRequestService
         for (var date = startDate; date <= endDate; date = date.AddDays(1))
         {
             if (date.DayOfWeek != DayOfWeek.Saturday && date.DayOfWeek != DayOfWeek.Sunday)
-            {
                 totalDays += 1;
-            }
         }
         return totalDays;
     }
 
     public async Task<LeaveRequestDto?> CreateLeaveRequestAsync(int userId, CreateLeaveRequestDto dto)
     {
-        var user = await _context.Users.FindAsync(userId);
+        var user = await _context.Users.Include(u => u.Department).FirstOrDefaultAsync(u => u.UserId == userId);
         if (user == null) return null;
 
         var leaveType = await _context.LeaveTypes.FindAsync(dto.LeaveTypeId);
@@ -46,9 +46,7 @@ public class LeaveRequestService : ILeaveRequestService
                 && lb.Year == currentYear);
 
         if (balance == null || (balance.TotalDays - balance.UsedDays) < totalDays)
-        {
             return null;
-        }
 
         var leaveRequest = new LeaveRequest
         {
@@ -65,6 +63,17 @@ public class LeaveRequestService : ILeaveRequestService
 
         _context.LeaveRequests.Add(leaveRequest);
         await _context.SaveChangesAsync();
+
+        // Notify department manager
+        if (user.Department?.ManagerId != null)
+        {
+            await _notificationService.CreateAsync(
+                user.Department.ManagerId.Value,
+                "LEAVE_REQUEST",
+                "คำขอลาใหม่",
+                $"{user.FirstName} {user.LastName} ยื่นคำขอ{leaveType.Name} {totalDays} วัน",
+                "LeaveRequest", leaveRequest.LeaveRequestId);
+        }
 
         return new LeaveRequestDto
         {
@@ -164,6 +173,7 @@ public class LeaveRequestService : ILeaveRequestService
             var leaveRequest = await _context.LeaveRequests
                 .Include(lr => lr.User)
                 .ThenInclude(u => u.Department)
+                .Include(lr => lr.LeaveType)
                 .FirstOrDefaultAsync(lr => lr.LeaveRequestId == id);
 
             if (leaveRequest == null) return false;
@@ -171,15 +181,8 @@ public class LeaveRequestService : ILeaveRequestService
             var approver = await _context.Users.FindAsync(approverId);
             if (approver == null) return false;
 
-            if (leaveRequest.User.Department?.ManagerId != approverId)
-            {
-                return false;
-            }
-
-            if (leaveRequest.Status != LeaveRequestStatus.Pending)
-            {
-                return false;
-            }
+            if (leaveRequest.User.Department?.ManagerId != approverId) return false;
+            if (leaveRequest.Status != LeaveRequestStatus.Pending) return false;
 
             var currentYear = DateTime.Now.Year;
             var balance = await _context.LeaveBalances
@@ -188,20 +191,29 @@ public class LeaveRequestService : ILeaveRequestService
                     && lb.Year == currentYear);
 
             if (balance == null || (balance.TotalDays - balance.UsedDays) < leaveRequest.TotalDays)
-            {
                 return false;
-            }
 
             leaveRequest.Status = LeaveRequestStatus.Approved;
             leaveRequest.ApproverId = approverId;
             leaveRequest.ApproverComment = dto.Comment;
             leaveRequest.UpdatedAt = DateTime.UtcNow;
-
             balance.UsedDays += leaveRequest.TotalDays;
 
             _context.LeaveRequests.Update(leaveRequest);
             _context.LeaveBalances.Update(balance);
+            await _context.SaveChangesAsync();
 
+            // Notify employee
+            _context.Notifications.Add(new Notification
+            {
+                UserId = leaveRequest.UserId,
+                Type = "LEAVE_APPROVED",
+                Title = "คำขอลาได้รับการอนุมัติ",
+                Message = $"คำขอ{leaveRequest.LeaveType.Name} {leaveRequest.TotalDays} วัน ได้รับการอนุมัติแล้ว",
+                RelatedEntityType = "LeaveRequest",
+                RelatedEntityId = leaveRequest.LeaveRequestId,
+                CreatedAt = DateTime.UtcNow
+            });
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
@@ -219,19 +231,12 @@ public class LeaveRequestService : ILeaveRequestService
         var leaveRequest = await _context.LeaveRequests
             .Include(lr => lr.User)
             .ThenInclude(u => u.Department)
+            .Include(lr => lr.LeaveType)
             .FirstOrDefaultAsync(lr => lr.LeaveRequestId == id);
 
         if (leaveRequest == null) return false;
-
-        if (leaveRequest.User.Department?.ManagerId != approverId)
-        {
-            return false;
-        }
-
-        if (leaveRequest.Status != LeaveRequestStatus.Pending)
-        {
-            return false;
-        }
+        if (leaveRequest.User.Department?.ManagerId != approverId) return false;
+        if (leaveRequest.Status != LeaveRequestStatus.Pending) return false;
 
         leaveRequest.Status = LeaveRequestStatus.Rejected;
         leaveRequest.ApproverId = approverId;
@@ -241,6 +246,14 @@ public class LeaveRequestService : ILeaveRequestService
         _context.LeaveRequests.Update(leaveRequest);
         await _context.SaveChangesAsync();
 
+        // Notify employee
+        await _notificationService.CreateAsync(
+            leaveRequest.UserId,
+            "LEAVE_REJECTED",
+            "คำขอลาถูกปฏิเสธ",
+            $"คำขอ{leaveRequest.LeaveType.Name} {leaveRequest.TotalDays} วัน ถูกปฏิเสธ",
+            "LeaveRequest", leaveRequest.LeaveRequestId);
+
         return true;
     }
 
@@ -248,11 +261,7 @@ public class LeaveRequestService : ILeaveRequestService
     {
         var leaveRequest = await _context.LeaveRequests.FindAsync(id);
         if (leaveRequest == null || leaveRequest.UserId != userId) return false;
-
-        if (leaveRequest.Status != LeaveRequestStatus.Pending)
-        {
-            return false;
-        }
+        if (leaveRequest.Status != LeaveRequestStatus.Pending) return false;
 
         leaveRequest.Status = LeaveRequestStatus.Cancelled;
         leaveRequest.UpdatedAt = DateTime.UtcNow;
