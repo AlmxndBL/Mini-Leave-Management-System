@@ -1,0 +1,119 @@
+<div class="page">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="btn-back" (click)="goBack()">← กลับ</button>
+      <div>
+        <h1>รายงานสถิติการลา</h1>
+        <p class="subtitle">สรุปการลาตามแผนกและประเภทการลา</p>
+      </div>
+    </div>
+    <button class="btn-export" (click)="export()" [disabled]="rows.length === 0">
+      ⬇ Export CSV
+    </button>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-card">
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>ปี</label>
+        <input type="number" [(ngModel)]="query.year" placeholder="เช่น 2025" min="2020" max="2099" />
+      </div>
+      <div class="filter-group">
+        <label>วันที่เริ่ม</label>
+        <input type="date" [(ngModel)]="query.startDate" />
+      </div>
+      <div class="filter-group">
+        <label>วันที่สิ้นสุด</label>
+        <input type="date" [(ngModel)]="query.endDate" />
+      </div>
+      <div class="filter-group">
+        <label>ประเภทการลา</label>
+        <select [(ngModel)]="query.leaveTypeId">
+          <option [ngValue]="undefined">ทั้งหมด</option>
+          <option *ngFor="let t of leaveTypes" [ngValue]="t.leaveTypeId">{{ t.name }}</option>
+        </select>
+      </div>
+      <button class="btn-search" (click)="search()">ค้นหา</button>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="summary-grid" *ngIf="searched && rows.length > 0">
+    <div class="summary-card">
+      <div class="summary-value">{{ rows.length }}</div>
+      <div class="summary-label">กลุ่มข้อมูล</div>
+    </div>
+    <div class="summary-card accent-blue">
+      <div class="summary-value">{{ totalRequests }}</div>
+      <div class="summary-label">คำขอลา (อนุมัติ)</div>
+    </div>
+    <div class="summary-card accent-green">
+      <div class="summary-value">{{ totalDays }}</div>
+      <div class="summary-label">รวมวันลา</div>
+    </div>
+  </div>
+
+  <!-- Results table -->
+  <div class="table-card" *ngIf="searched">
+    <div class="table-header">
+      <h2>ผลสรุป</h2>
+      <span class="result-count" *ngIf="rows.length > 0">{{ rows.length }} กลุ่ม</span>
+    </div>
+
+    <div *ngIf="loading" class="loading">กำลังโหลด...</div>
+
+    <div *ngIf="!loading && rows.length === 0" class="no-data">
+      ไม่พบข้อมูลตามเงื่อนไขที่กำหนด
+    </div>
+
+    <div *ngIf="!loading && rows.length > 0" class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>แผนก</th>
+            <th>ประเภทการลา</th>
+            <th class="num">คำขอ</th>
+            <th class="num">พนักงาน</th>
+            <th class="num">รวมวัน</th>
+            <th>สัดส่วน</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows">
+            <td>{{ row.departmentName }}</td>
+            <td>
+              <span class="leave-type-badge"
+                    [style.background]="row.leaveTypeColor + '22'"
+                    [style.color]="row.leaveTypeColor"
+                    [style.border-color]="row.leaveTypeColor + '44'">
+                {{ row.leaveTypeName }}
+              </span>
+            </td>
+            <td class="num">{{ row.requestCount }}</td>
+            <td class="num">{{ row.employeeCount }}</td>
+            <td class="num"><strong>{{ row.totalDays }}</strong></td>
+            <td class="bar-cell">
+              <div class="bar-track">
+                <div class="bar-fill"
+                     [style.width]="totalDays > 0 ? (row.totalDays / totalDays * 100) + '%' : '0%'"
+                     [style.background]="row.leaveTypeColor">
+                </div>
+              </div>
+              <span class="bar-pct">{{ totalDays > 0 ? (row.totalDays / totalDays * 100 | number:'1.0-1') : 0 }}%</span>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="2">รวมทั้งหมด</td>
+            <td class="num">{{ totalRequests }}</td>
+            <td class="num"></td>
+            <td class="num"><strong>{{ totalDays }}</strong></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>

@@ -49,6 +49,23 @@ export interface DashboardSummary {
   rejectedCount: number;
 }
 
+export interface LeaveSummaryRow {
+  departmentName: string;
+  leaveTypeName: string;
+  leaveTypeColor: string;
+  requestCount: number;
+  employeeCount: number;
+  totalDays: number;
+}
+
+export interface ReportQuery {
+  year?: number;
+  startDate?: string;
+  endDate?: string;
+  departmentId?: number;
+  leaveTypeId?: number;
+}
+
 export const LeaveRequestStatus = {
   Pending: 0,
   Approved: 1,

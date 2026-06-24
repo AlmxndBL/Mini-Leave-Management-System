@@ -103,6 +103,10 @@ export class ManagerComponent implements OnInit {
     });
   }
 
+  goToReports(): void {
+    this.router.navigate(['/reports']);
+  }
+
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);

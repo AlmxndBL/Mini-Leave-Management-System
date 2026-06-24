@@ -29,6 +29,24 @@
   color: var(--text-muted);
 }
 
+.nav-actions { display: flex; gap: 8px; align-items: center; }
+
+.btn-reports {
+  background: var(--surface);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s var(--ease);
+}
+
+.btn-reports:hover {
+  background: var(--primary-soft);
+}
+
 .btn-logout {
   background: var(--surface);
   color: var(--text-muted);
