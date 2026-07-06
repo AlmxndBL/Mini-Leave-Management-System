@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<LeaveType> LeaveTypes { get; set; } = null!;
     public DbSet<LeaveBalance> LeaveBalances { get; set; } = null!;
     public DbSet<LeaveRequest> LeaveRequests { get; set; } = null!;
+    public DbSet<Notification> Notifications { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -89,6 +90,22 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.Status);
+        });
+
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(e => e.NotificationId);
+            entity.Property(e => e.Type).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Title).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Message).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.RelatedEntityType).HasMaxLength(50);
+            entity.Property(e => e.IsRead).HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.UserId, e.IsRead });
         });
     }
 }

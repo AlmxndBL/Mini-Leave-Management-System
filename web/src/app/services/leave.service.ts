@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { LeaveRequest, LeaveBalance, LeaveType, DashboardSummary, CreateLeaveRequest, ApproveLeaveRequest, RejectLeaveRequest, LeaveSummaryRow, ReportQuery } from '../models/leave.model';
+import { LeaveRequest, LeaveBalance, LeaveType, DashboardSummary, CreateLeaveRequest, ApproveLeaveRequest, RejectLeaveRequest, LeaveSummaryRow, ReportQuery, AppNotification } from '../models/leave.model';
 
 @Injectable({
   providedIn: 'root'
@@ -67,6 +67,25 @@ export class LeaveService {
     return this.http.get<DashboardSummary>(`${this.apiUrl}/dashboard/summary`);
   }
 
+// Notifications
+  getMyNotifications(unreadOnly = false): Observable<AppNotification[]> {
+    const params: Record<string, string> = {};
+    if (unreadOnly) params['unreadOnly'] = 'true';
+    return this.http.get<AppNotification[]>(`${this.apiUrl}/notifications/me`, { params });
+  }
+
+  getUnreadCount(): Observable<{ count: number }> {
+    return this.http.get<{ count: number }>(`${this.apiUrl}/notifications/me/unread-count`);
+  }
+
+  markNotificationRead(id: number): Observable<void> {
+    return this.http.put<void>(`${this.apiUrl}/notifications/${id}/read`, {});
+  }
+
+  markAllNotificationsRead(): Observable<void> {
+    return this.http.put<void>(`${this.apiUrl}/notifications/read-all`, {});
+  }
+
   // Reports
   getLeaveSummary(query: ReportQuery): Observable<LeaveSummaryRow[]> {
     const params: Record<string, string> = {};
@@ -97,5 +116,6 @@ export class LeaveService {
         a.click();
         URL.revokeObjectURL(a.href);
       });
+  }
   }
 }

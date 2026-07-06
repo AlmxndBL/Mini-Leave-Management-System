@@ -5,7 +5,8 @@
       <p class="welcome">ยินดีต้อนรับ, {{ user?.firstName }} {{ user?.lastName }}</p>
     </div>
     <div class="nav-actions">
-      <button class="btn-reports" (click)="goToReports()">รายงาน</button>
+<app-notification-bell></app-notification-bell>
+<button class="btn-reports" (click)="goToReports()">รายงาน</button>
       <button class="btn-logout" (click)="logout()">ออกจากระบบ</button>
     </div>
   </div>
